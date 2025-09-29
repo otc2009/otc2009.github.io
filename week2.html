@@ -7,6 +7,7 @@
                 margin: 0;
                 box-sizing: border-box;
                 min-height: 100vh;
+                border: 10px solid black;
 
                 font-size: xx-large;
                 font-family: 'Courier New', Courier, monospace;
@@ -15,11 +16,11 @@
                 padding-top: 100px;
                 padding-left: 65px;
 
-                background-color: black;
+                background-image: url('https://frankieslegacy.wordpress.com/wp-content/uploads/2018/02/red-pill-of-awareness-or-blue-pill-of-unconsciousness.jpg');
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
-                background-color: rgb(0, 0, 0);
+                background-color: white;
             }
             h2 {
                 font-size: larger;
@@ -39,24 +40,40 @@
             }
 
             .btn.red:hover{
-                background-color: white;
-                color: black;
+                background-color: red;
             }
             .btn.blue:hover{
                 background-color: blue;
             }
+            .btn.back {
+                text-decoration: none;
+                color:white;
+                border: 2px solid black;
+                padding: 10px;
+                display: inline-block;
+                margin-right: 0px;
+                margin-left: 100px;
+            }
+            .btn:hover{
+                background-color: aliceblue;
+                color:black;
+            }
+
         </style>
     </head>
     <body>
         </h1>
-            Owen's super freakin dope awesome website
+            Owen's Website - Week #2
         </h1>
         <h2>
+            Make your choice.
         </h2>
     </body>
         <main>
             <div style="margin-top:400px; margin-right: 65; display:flex; justify-content:center; gap:100px";>
-                <a class="btn red" href="week2.html">Week 2</a>
+                <a class="btn red" href="page2.html">Long Live the Web</a>
+                <a class="btn blue" href="page3.html">Mozilla Manifesto</a> 
             </div>
         </main>
+            <a class="btn back" href="index.html">back</a>
 </html>
