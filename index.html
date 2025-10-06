@@ -37,14 +37,16 @@
                 border: 4px solid #000;
                 color: #ffffff;
                 border-radius: 25px;
+
+                transition: transform 180ms ease, background-color 180ms ease, color 180ms ease;
+                transform-origin: center;
             }
-            .btn:hover{
-                background-color: white;
-                color: black;
+            .btn:hover, .btn:focus-visible{
+                background: #ffffff;
+                color:#000;
+                transform: scale(1.12);
             }
-            .btn.blue:hover{
-                background-color: blue;
-            }
+
         </style>
     </head>
     <body>
