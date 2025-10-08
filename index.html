@@ -31,12 +31,12 @@
 
             .btn {
                 display: inline-block;
-                margin: 12px 100px;
+                margin: 12px 70px;
                 text-decoration: none;
                 padding: 10px 16px;
                 border: 4px solid #000;
                 color: #ffffff;
-                border-radius: 25px;
+                border-radius: 30px;
                 margin-top:150px;
 
                 transition: transform 180ms ease, background-color 180ms ease, color 180ms ease;
@@ -46,6 +46,14 @@
                 background: #ffffff;
                 color:#000;
                 transform: scale(1.12);
+            }
+            .btn-row{
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap:20px;
+                flex-wrap: wrap;
+                text-align: center;
             }
 
         </style>
@@ -58,10 +66,11 @@
         </h2>
     </body>
         <main>
-            <div style= "text-align:center; display:flex; justify-content:center; gap:100px";>
+            <div class="btn-row";>
                 <a class="btn week1" href="week1.html">Week 1</a>
                 <a class="btn red" href="week2.html">Week 2</a>
                 <a class="btn paulrand" href="paul.html">Paul Rand</a>
+                <a class="btn week2" href="week3.html">Week 3</a>
             </div>
         </main>
 </html>
