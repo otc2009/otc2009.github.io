@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPS Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+        #canvas {
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <button id="resetButton" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 16px; font-weight: bold; background-color: #333; color: white; border: 2px solid black; border-radius: 8px; cursor: pointer; z-index: 1000; box-shadow: 3px 3px 10px rgba(0,0,0,0.5);">RESET DEMO</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentImage = 'title.png';
+        let selectedChoice = null; // Track which button user clicked (rock, paper, scissors)
+        let titleImg = new Image();
+        let titlePressedImg = new Image();
+        let pairingImg = new Image();
+        let pairedImg = new Image();
+        let selectionNoneImg = new Image();
+        let selectionRedImg = new Image();
+        let selectionYellowImg = new Image();
+        let selectionGreenImg = new Image();
+        let rockWinsImg = new Image();
+        let paperWinsImg = new Image();
+        let papersTieImg = new Image();
+
+        let cropData = {};
+
+        // Load images
+        titleImg.src = 'title.png';
+        titlePressedImg.src = 'title_pressed.png';
+        pairingImg.src = 'pairing.png';
+        pairedImg.src = 'paired.png';
+        selectionNoneImg.src = 'selection_none.png';
+        selectionRedImg.src = 'selection_red.png';
+        selectionYellowImg.src = 'selection_yellow.png';
+        selectionGreenImg.src = 'selection_green.png';
+        rockWinsImg.src = 'rock_wins.png';
+        paperWinsImg.src = 'paper_wins.png';
+        papersTieImg.src = 'papers_tie.png';
+
+        // Function to detect black borders and calculate crop area
+        function detectBlackBorders(img) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(img, 0, 0);
+
+            const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
+            const data = imageData.data;
+
+            const threshold = 20; // Pixels darker than this are considered black
+
+            // Find top border
+            let top = 0;
+            for (let y = 0; y < img.height; y++) {
+                let hasNonBlack = false;
+                for (let x = 0; x < img.width; x++) {
+                    const i = (y * img.width + x) * 4;
+                    if (data[i] > threshold || data[i+1] > threshold || data[i+2] > threshold) {
+                        hasNonBlack = true;
+                        break;
+                    }
+                }
+                if (hasNonBlack) {
+                    top = y;
+                    break;
+                }
+            }
+
+            // Find bottom border
+            let bottom = img.height;
+            for (let y = img.height - 1; y >= 0; y--) {
+                let hasNonBlack = false;
+                for (let x = 0; x < img.width; x++) {
+                    const i = (y * img.width + x) * 4;
+                    if (data[i] > threshold || data[i+1] > threshold || data[i+2] > threshold) {
+                        hasNonBlack = true;
+                        break;
+                    }
+                }
+                if (hasNonBlack) {
+                    bottom = y + 1;
+                    break;
+                }
+            }
+
+            // Find left border
+            let left = 0;
+            for (let x = 0; x < img.width; x++) {
+                let hasNonBlack = false;
+                for (let y = 0; y < img.height; y++) {
+                    const i = (y * img.width + x) * 4;
+                    if (data[i] > threshold || data[i+1] > threshold || data[i+2] > threshold) {
+                        hasNonBlack = true;
+                        break;
+                    }
+                }
+                if (hasNonBlack) {
+                    left = x;
+                    break;
+                }
+            }
+
+            // Find right border
+            let right = img.width;
+            for (let x = img.width - 1; x >= 0; x--) {
+                let hasNonBlack = false;
+                for (let y = 0; y < img.height; y++) {
+                    const i = (y * img.width + x) * 4;
+                    if (data[i] > threshold || data[i+1] > threshold || data[i+2] > threshold) {
+                        hasNonBlack = true;
+                        break;
+                    }
+                }
+                if (hasNonBlack) {
+                    right = x + 1;
+                    break;
+                }
+            }
+
+            return {
+                x: left,
+                y: top,
+                width: right - left,
+                height: bottom - top
+            };
+        }
+
+        // Wait for title image to load to set canvas size
+        titleImg.onload = function() {
+            cropData['title.png'] = detectBlackBorders(titleImg);
+            // Make canvas smaller (70% of original size)
+            canvas.width = cropData['title.png'].width * 0.7;
+            canvas.height = cropData['title.png'].height * 0.7;
+            drawCurrentImage();
+        };
+
+        titlePressedImg.onload = function() {
+            cropData['title_pressed.png'] = detectBlackBorders(titlePressedImg);
+        };
+
+        pairingImg.onload = function() {
+            cropData['pairing.png'] = detectBlackBorders(pairingImg);
+        };
+
+        pairedImg.onload = function() {
+            cropData['paired.png'] = detectBlackBorders(pairedImg);
+        };
+
+        selectionNoneImg.onload = function() {
+            cropData['selection_none.png'] = detectBlackBorders(selectionNoneImg);
+        };
+
+        selectionRedImg.onload = function() {
+            cropData['selection_red.png'] = detectBlackBorders(selectionRedImg);
+        };
+
+        selectionYellowImg.onload = function() {
+            cropData['selection_yellow.png'] = detectBlackBorders(selectionYellowImg);
+        };
+
+        selectionGreenImg.onload = function() {
+            cropData['selection_green.png'] = detectBlackBorders(selectionGreenImg);
+        };
+
+        rockWinsImg.onload = function() {
+            cropData['rock_wins.png'] = detectBlackBorders(rockWinsImg);
+        };
+
+        paperWinsImg.onload = function() {
+            cropData['paper_wins.png'] = detectBlackBorders(paperWinsImg);
+        };
+
+        papersTieImg.onload = function() {
+            cropData['papers_tie.png'] = detectBlackBorders(papersTieImg);
+        };
+
+        function drawCurrentImage() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let img, crop;
+            if (currentImage === 'title.png') {
+                img = titleImg;
+                crop = cropData['title.png'];
+            } else if (currentImage === 'title_pressed.png') {
+                img = titlePressedImg;
+                crop = cropData['title_pressed.png'];
+            } else if (currentImage === 'pairing.png') {
+                img = pairingImg;
+                crop = cropData['pairing.png'];
+            } else if (currentImage === 'paired.png') {
+                img = pairedImg;
+                crop = cropData['paired.png'];
+            } else if (currentImage === 'selection_none.png') {
+                img = selectionNoneImg;
+                crop = cropData['selection_none.png'];
+            } else if (currentImage === 'selection_red.png') {
+                img = selectionRedImg;
+                crop = cropData['selection_red.png'];
+            } else if (currentImage === 'selection_yellow.png') {
+                img = selectionYellowImg;
+                crop = cropData['selection_yellow.png'];
+            } else if (currentImage === 'selection_green.png') {
+                img = selectionGreenImg;
+                crop = cropData['selection_green.png'];
+            } else if (currentImage === 'rock_wins.png') {
+                img = rockWinsImg;
+                crop = cropData['rock_wins.png'];
+            } else if (currentImage === 'paper_wins.png') {
+                img = paperWinsImg;
+                crop = cropData['paper_wins.png'];
+            } else if (currentImage === 'papers_tie.png') {
+                img = papersTieImg;
+                crop = cropData['papers_tie.png'];
+            }
+
+            if (img && crop) {
+                // Draw the cropped image
+                ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height,
+                             0, 0, canvas.width, canvas.height);
+
+                // Add thicker black border that bleeds into the photo
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 8;
+                ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            } else if (img && !crop) {
+                // If crop data isn't ready yet, calculate it now
+                crop = detectBlackBorders(img);
+                cropData[currentImage] = crop;
+                // Draw the cropped image
+                ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height,
+                             0, 0, canvas.width, canvas.height);
+
+                // Add thicker black border that bleeds into the photo
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 8;
+                ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function resetDemo() {
+            currentImage = 'title.png';
+            drawCurrentImage();
+        }
+
+        // Reset button event listener
+        document.getElementById('resetButton').addEventListener('click', resetDemo);
+
+        // Handle click events
+        canvas.addEventListener('click', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (currentImage === 'title.png') {
+                // Check if click is on the play button area
+                const buttonY = canvas.height * 0.6; // Button starts at 60% down
+                const buttonHeight = canvas.height * 0.3; // Button is 30% of height
+                const buttonX = canvas.width * 0.2; // Button starts at 20% from left
+                const buttonWidth = canvas.width * 0.6; // Button is 60% of width
+
+                if (x >= buttonX && x <= buttonX + buttonWidth &&
+                    y >= buttonY && y <= buttonY + buttonHeight) {
+                    // Flash the pressed state
+                    currentImage = 'title_pressed.png';
+                    drawCurrentImage();
+
+                    // Show title_pressed for 2 seconds, then transition to pairing
+                    setTimeout(() => {
+                        currentImage = 'pairing.png';
+                        drawCurrentImage();
+                    }, 2000);
+                }
+            } else if (currentImage === 'pairing.png') {
+                // Any click on pairing screen goes to paired
+                currentImage = 'paired.png';
+                drawCurrentImage();
+            } else if (currentImage === 'paired.png') {
+                // Check if click is on the "Ready" button
+                // Ready button is typically in the bottom center area
+                const buttonY = canvas.height * 0.75; // Button starts at 75% down
+                const buttonHeight = canvas.height * 0.15; // Button is 15% of height
+                const buttonX = canvas.width * 0.3; // Button starts at 30% from left
+                const buttonWidth = canvas.width * 0.4; // Button is 40% of width
+
+                if (x >= buttonX && x <= buttonX + buttonWidth &&
+                    y >= buttonY && y <= buttonY + buttonHeight) {
+                    // Go to selection_none
+                    currentImage = 'selection_none.png';
+                    drawCurrentImage();
+
+                    // Automatic transitions through selection screens
+                    setTimeout(() => {
+                        currentImage = 'selection_red.png';
+                        drawCurrentImage();
+
+                        setTimeout(() => {
+                            currentImage = 'selection_yellow.png';
+                            drawCurrentImage();
+
+                            setTimeout(() => {
+                                currentImage = 'selection_green.png';
+                                drawCurrentImage();
+
+                                // After 1 second on selection_green, show result based on selectedChoice
+                                if (selectedChoice === 'rock') {
+                                    setTimeout(() => {
+                                        // Randomly choose between rock_wins.png and papers_tie.png
+                                        currentImage = Math.random() < 0.5 ? 'rock_wins.png' : 'papers_tie.png';
+                                        drawCurrentImage();
+                                    }, 1000);
+                                }
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                }
+            } else if (currentImage === 'selection_none.png' || currentImage === 'selection_red.png' ||
+                       currentImage === 'selection_yellow.png' || currentImage === 'selection_green.png') {
+                // Detect which button was clicked (rock, paper, or scissors)
+                // Assuming three buttons arranged horizontally
+                const buttonY = canvas.height * 0.5; // Buttons around middle
+                const buttonHeight = canvas.height * 0.3;
+
+                // Rock button (left third)
+                if (x >= 0 && x <= canvas.width * 0.33 &&
+                    y >= buttonY && y <= buttonY + buttonHeight) {
+                    selectedChoice = 'rock';
+                }
+                // Paper button (middle third)
+                else if (x >= canvas.width * 0.33 && x <= canvas.width * 0.66 &&
+                         y >= buttonY && y <= buttonY + buttonHeight) {
+                    selectedChoice = 'paper';
+                }
+                // Scissors button (right third)
+                else if (x >= canvas.width * 0.66 && x <= canvas.width &&
+                         y >= buttonY && y <= buttonY + buttonHeight) {
+                    selectedChoice = 'scissors';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

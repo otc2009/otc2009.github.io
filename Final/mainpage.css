@@ -4,6 +4,9 @@ body {
     min-height: 100vh;
     padding-bottom: 50px;
     overflow:hidden;
+    border: 12px solid white;
+    box-sizing: border-box;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.3);
 }
   
 #imgUpload {
@@ -62,7 +65,7 @@ body {
     color: #000000;
     transform: scale(1.15);
 }
-#vStretch1, #vStretch2, #hStretch1, #hStretch2, #center {
+#vStretch1, #vStretch2, #hStretch1, #hStretch2, #center, #bwFilter, #flipH, #flipV {
     position: relative;
     z-index: 2;
     font-weight: bold;
@@ -71,10 +74,18 @@ body {
     box-shadow: 5px 5px 10px #000000;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-#vStretch1:hover, #vStretch2:hover, #hStretch1:hover, #hStretch2:hover, #center:hover {
+#vStretch1:hover, #vStretch2:hover, #hStretch1:hover, #hStretch2:hover, #center:hover, #bwFilter:hover, #flipH:hover, #flipV:hover {
     box-shadow: 15px 15px 30px #000000;
     color: #000000;
     transform: scale(1.15);
+}
+#bwFilter {
+    background: linear-gradient(to bottom right, black 50%, white 50%);
+    color: white;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+#bwFilter:hover{
+    transform: scale(1.03);
 }
 
 .slider-item {
@@ -82,7 +93,7 @@ body {
     padding: 20px 25px;
     background-color: rgb(212, 212, 212);
     box-shadow: 5px 5px 10px #000000;
-    margin: 10px;
+    margin: 10px 10px 10px 20px;
     border-radius: 8px;
     transition: box-shadow 0.3s ease;
     flex: 0 0 calc(50%-20px);
@@ -141,10 +152,59 @@ label {
     flex-wrap:wrap;
     max-width: 800px;
     justify-content: left;
-    margin-top:50px;
+    margin-top:30px;
+}
+#colorSliders {
+    flex-wrap: nowrap;
+    margin-top: 0px;
+}
+#colorSliders .slider-item {
+    flex: 0 0 auto;
+    padding: 15px 18px;
+}
+#colorSliders input[type="range"] {
+    width: 125px;
+}
+#colorSliders2 {
+    flex-wrap: nowrap;
+    margin-top: 0px;
+}
+#colorSliders2 .slider-item {
+    flex: 0 0 auto;
+    padding: 15px 18px;
+}
+#colorSliders2 input[type="range"] {
+    width: 125px;
+}
+#yellowSliderBox{
+    background-color: rgb(255, 255, 150);
+}
+#purpleSliderBox{
+    background-color: rgb(200, 150, 255);
+}
+#pinkSliderBox{
+    background-color: rgb(255, 182, 193);
 }
 h1{
-    color:white;
+    color: white;
     text-align: center;
+    font-size: 42px;
+    font-weight: bold;
+    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6);
+    letter-spacing: 1px;
+    margin: 20px 0;
+}
+.decorative-line {
+    height: 3px;
+    background-color: white;
+    width: 420px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-left: 140px;
+    box-shadow: 5px 5px 10px #000000;
+}
+#bottomLine {
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
