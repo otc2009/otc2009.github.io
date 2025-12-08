@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="mainpage.css">
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.js"></script>
+    <script src="sketch.js"></script>
+    <title>Main Page</title>
+</head>
+
+<body>
+    <div class="page">
+        <h1>Owen's super awesome cool aesthetic Photo Editor</h1>
+
+        <input type="file" id="imgUpload" accept="image/*">
+        <div style="display: flex; gap: 20px; justify-content: center;">
+            <button id="resetButton">UPLOAD</button>
+            <button id="resetFiltersButton">RESET</button>
+            <button id="downloadButton">DOWNLOAD</button>
+        </div>
+        <div class="slider-container">
+            <div class="slider-item">
+                <label for="exposureSlider">Exposure</label>
+                <input type="range" id="exposureSlider" min="-100" max="100" value="0">
+            </div>
+            <div class="slider-item">
+                <label for="pixelateSlider">Pixelate</label>
+                <input type="range" id="pixelateSlider" min="0" max="100" value="100">
+            </div>
+            <div class="slider-item">
+                <label for="shimmerSlider">Shimmer</label>
+                <input type="range" id="shimmerSlider" min="0" max="100" value="0">
+            </div>
+            <div class="slider-item">
+                <label for="grainSlider">Grain</label>
+                <input type="range" id="grainSlider" min="0" max="100" value="0">
+            </div>
+        </div>
+
+        <div id="resolutionButtons" style="position: fixed; bottom: 20px; left: 20px; z-index:5">
+            <div style="display:flex; flex-direction: column; gap:5px;">
+                <button id="vStretch2" style="width: 50px; height: 50px;">▲</button>
+                <button id="vStretch1" style="width: 50px; height: 50px;">△</button>
+            </div>
+            <div style="display: flex; gap: 5px; margin-top:5px;">
+                <button id="center" style="width: 50px; height: 50px;">-</button>
+                <button id="hStretch1" style="width: 50px; height: 50px;">▷</button>
+                <button id="hStretch2" style="width: 50px; height: 50px;">►</button>
+            </div>
+        </div>
+        <div id="colorSliders" class="slider-container">
+            <div class="slider-item" id="redSliderBox">
+                <label for="redSlider">R</label>
+                <input type="range" id="redSlider" min="0" max="100" value="50">
+            </div>
+            <div class="slider-item" id="greenSliderBox">
+                <label for="greenSlider">G</label>
+                <input type="range" id="greenSlider" min="0" max="100" value="50">
+            </div>
+            <div class="slider-item" id="blueSliderBox">
+                <label for="blueSlider">B</label>
+                <input type="range" id="blueSlider" min="0" max="100" value="50">
+            </div>
+        </div>
+    </div>
+</body>
+</html>
