@@ -41,6 +41,7 @@
         let rockWinsImg = new Image();
         let paperWinsImg = new Image();
         let papersTieImg = new Image();
+        let errorImg = new Image();
 
         let cropData = {};
 
@@ -49,13 +50,14 @@
         titlePressedImg.src = 'title_pressed.png';
         pairingImg.src = 'pairing.png';
         pairedImg.src = 'paired.png';
-        selectionNoneImg.src = 'selection_none.png';
-        selectionRedImg.src = 'selection_red.png';
-        selectionYellowImg.src = 'selection_yellow.png';
-        selectionGreenImg.src = 'selection_green.png';
+        selectionNoneImg.src = 'realselection_none.png';
+        selectionRedImg.src = 'realselection_3.png';
+        selectionYellowImg.src = 'realselection_2.png';
+        selectionGreenImg.src = 'realselection_1.png';
         rockWinsImg.src = 'rock_wins.png';
         paperWinsImg.src = 'paper_wins.png';
         papersTieImg.src = 'papers_tie.png';
+        errorImg.src = 'realerror.png';
 
         // Function to detect black borders and calculate crop area
         function detectBlackBorders(img) {
@@ -168,19 +170,19 @@
         };
 
         selectionNoneImg.onload = function() {
-            cropData['selection_none.png'] = detectBlackBorders(selectionNoneImg);
+            cropData['realselection_none.png'] = detectBlackBorders(selectionNoneImg);
         };
 
         selectionRedImg.onload = function() {
-            cropData['selection_red.png'] = detectBlackBorders(selectionRedImg);
+            cropData['realselection_3.png'] = detectBlackBorders(selectionRedImg);
         };
 
         selectionYellowImg.onload = function() {
-            cropData['selection_yellow.png'] = detectBlackBorders(selectionYellowImg);
+            cropData['realselection_2.png'] = detectBlackBorders(selectionYellowImg);
         };
 
         selectionGreenImg.onload = function() {
-            cropData['selection_green.png'] = detectBlackBorders(selectionGreenImg);
+            cropData['realselection_1.png'] = detectBlackBorders(selectionGreenImg);
         };
 
         rockWinsImg.onload = function() {
@@ -193,6 +195,10 @@
 
         papersTieImg.onload = function() {
             cropData['papers_tie.png'] = detectBlackBorders(papersTieImg);
+        };
+
+        errorImg.onload = function() {
+            cropData['realerror.png'] = detectBlackBorders(errorImg);
         };
 
         function drawCurrentImage() {
@@ -211,18 +217,18 @@
             } else if (currentImage === 'paired.png') {
                 img = pairedImg;
                 crop = cropData['paired.png'];
-            } else if (currentImage === 'selection_none.png') {
+            } else if (currentImage === 'realselection_none.png') {
                 img = selectionNoneImg;
-                crop = cropData['selection_none.png'];
-            } else if (currentImage === 'selection_red.png') {
+                crop = cropData['realselection_none.png'];
+            } else if (currentImage === 'realselection_3.png') {
                 img = selectionRedImg;
-                crop = cropData['selection_red.png'];
-            } else if (currentImage === 'selection_yellow.png') {
+                crop = cropData['realselection_3.png'];
+            } else if (currentImage === 'realselection_2.png') {
                 img = selectionYellowImg;
-                crop = cropData['selection_yellow.png'];
-            } else if (currentImage === 'selection_green.png') {
+                crop = cropData['realselection_2.png'];
+            } else if (currentImage === 'realselection_1.png') {
                 img = selectionGreenImg;
-                crop = cropData['selection_green.png'];
+                crop = cropData['realselection_1.png'];
             } else if (currentImage === 'rock_wins.png') {
                 img = rockWinsImg;
                 crop = cropData['rock_wins.png'];
@@ -232,6 +238,9 @@
             } else if (currentImage === 'papers_tie.png') {
                 img = papersTieImg;
                 crop = cropData['papers_tie.png'];
+            } else if (currentImage === 'realerror.png') {
+                img = errorImg;
+                crop = cropData['realerror.png'];
             }
 
             if (img && crop) {
@@ -305,37 +314,44 @@
 
                 if (x >= buttonX && x <= buttonX + buttonWidth &&
                     y >= buttonY && y <= buttonY + buttonHeight) {
-                    // Go to selection_none
-                    currentImage = 'selection_none.png';
+                    // Reset selectedChoice when starting countdown
+                    selectedChoice = null;
+
+                    // Go to realselection_none
+                    currentImage = 'realselection_none.png';
                     drawCurrentImage();
 
                     // Automatic transitions through selection screens
                     setTimeout(() => {
-                        currentImage = 'selection_red.png';
+                        currentImage = 'realselection_3.png';
                         drawCurrentImage();
 
                         setTimeout(() => {
-                            currentImage = 'selection_yellow.png';
+                            currentImage = 'realselection_2.png';
                             drawCurrentImage();
 
                             setTimeout(() => {
-                                currentImage = 'selection_green.png';
+                                currentImage = 'realselection_1.png';
                                 drawCurrentImage();
 
-                                // After 1 second on selection_green, show result based on selectedChoice
-                                if (selectedChoice === 'rock') {
-                                    setTimeout(() => {
+                                // After 1 second on realselection_1, show result based on selectedChoice
+                                setTimeout(() => {
+                                    if (selectedChoice === 'rock') {
                                         // Randomly choose between rock_wins.png and papers_tie.png
                                         currentImage = Math.random() < 0.5 ? 'rock_wins.png' : 'papers_tie.png';
                                         drawCurrentImage();
-                                    }, 1000);
-                                }
+                                    } else if (selectedChoice === null) {
+                                        // No choice was made, show error screen
+                                        currentImage = 'realerror.png';
+                                        drawCurrentImage();
+                                    }
+                                }, 1000);
                             }, 1000);
                         }, 1000);
                     }, 1000);
                 }
-            } else if (currentImage === 'selection_none.png' || currentImage === 'selection_red.png' ||
-                       currentImage === 'selection_yellow.png' || currentImage === 'selection_green.png') {
+            } else if (currentImage === 'realselection_none.png' || currentImage === 'realselection_3.png' ||
+                       currentImage === 'realselection_2.png' || currentImage === 'realselection_1.png') {
                 // Detect which button was clicked (rock, paper, or scissors)
                 // Assuming three buttons arranged horizontally
                 const buttonY = canvas.height * 0.5; // Buttons around middle
@@ -355,6 +371,51 @@
                 else if (x >= canvas.width * 0.66 && x <= canvas.width &&
                          y >= buttonY && y <= buttonY + buttonHeight) {
                     selectedChoice = 'scissors';
+                }
+            } else if (currentImage === 'realerror.png') {
+                // Check if click is on the "Ready" button (same as paired screen)
+                const buttonY = canvas.height * 0.75; // Button starts at 75% down
+                const buttonHeight = canvas.height * 0.15; // Button is 15% of height
+                const buttonX = canvas.width * 0.3; // Button starts at 30% from left
+                const buttonWidth = canvas.width * 0.4; // Button is 40% of width
+
+                if (x >= buttonX && x <= buttonX + buttonWidth &&
+                    y >= buttonY && y <= buttonY + buttonHeight) {
+                    // Reset selectedChoice when starting countdown
+                    selectedChoice = null;
+
+                    // Go to realselection_none
+                    currentImage = 'realselection_none.png';
+                    drawCurrentImage();
+
+                    // Automatic transitions through selection screens
+                    setTimeout(() => {
+                        currentImage = 'realselection_3.png';
+                        drawCurrentImage();
+
+                        setTimeout(() => {
+                            currentImage = 'realselection_2.png';
+                            drawCurrentImage();
+
+                            setTimeout(() => {
+                                currentImage = 'realselection_1.png';
+                                drawCurrentImage();
+
+                                // After 1 second on realselection_1, show result based on selectedChoice
+                                setTimeout(() => {
+                                    if (selectedChoice === 'rock') {
+                                        // Randomly choose between rock_wins.png and papers_tie.png
+                                        currentImage = Math.random() < 0.5 ? 'rock_wins.png' : 'papers_tie.png';
+                                        drawCurrentImage();
+                                    } else if (selectedChoice === null) {
+                                        // No choice was made, show error screen
+                                        currentImage = 'realerror.png';
+                                        drawCurrentImage();
+                                    }
+                                }, 1000);
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
                 }
             }
         });
