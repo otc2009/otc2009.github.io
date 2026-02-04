@@ -2,92 +2,245 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FlickArt - Browser-based photo editor with filters, effects, and color grading">
     <link rel="stylesheet" href="mainpage.css">
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.js"></script>
     <script src="sketch.js"></script>
-    <title>Main Page</title>
+    <title>FlickArt | Photo Editor</title>
 </head>
 
 <body>
-    <div class="page">
-        <h1>FlickArt</h1>
-
-        <input type="file" id="imgUpload" accept="image/*">
-        <div style="display: flex; gap: 20px; justify-content: center;">
-            <button id="resetButton">UPLOAD</button>
-            <button id="resetFiltersButton">RESET</button>
-            <button id="downloadButton">DOWNLOAD</button>
+<!-- loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-dialog">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Processing...</p>
         </div>
-        <div class="decorative-line"></div>
-        <div class="slider-container">
-            <div class="slider-item">
-                <label for="exposureSlider">Exposure: <span id="exposureValue">0</span></label>
-                <input type="range" id="exposureSlider" min="-100" max="100" value="0">
-            </div>
-            <div class="slider-item">
-                <label for="pixelateSlider">Pixelate: <span id="pixelateValue">100</span></label>
-                <input type="range" id="pixelateSlider" min="0" max="100" value="100">
-            </div>
-            <div class="slider-item">
-                <label for="shimmerSlider">Shimmer: <span id="shimmerValue">0</span></label>
-                <input type="range" id="shimmerSlider" min="0" max="100" value="0">
-            </div>
-            <div class="slider-item">
-                <label for="grainSlider">Grain: <span id="grainValue">0</span></label>
-                <input type="range" id="grainSlider" min="0" max="100" value="0">
+    </div>
+
+<!-- toast notification -->
+    <div id="toast" class="toast hidden"></div>
+
+<!-- hidden file input -->
+    <input type="file" id="imgUpload" accept="image/*" style="display:none;">
+
+<!-- main window container -->
+    <div class="window">
+<!-- title bar -->
+        <div class="title-bar">
+            <span class="title-text">FlickArt - Photo Editor</span>
+            <div class="title-buttons">
+                <button class="title-btn">_</button>
+                <button class="title-btn">□</button>
+                <button class="title-btn close-btn">X</button>
             </div>
         </div>
 
-        <div class="decorative-line" id="bottomLine"></div>
+<!-- menu bar -->
+        <div class="menu-bar">
+            <button id="resetButton" class="menu-btn">File: Upload</button>
+            <button id="resetFiltersButton" class="menu-btn">Edit: Reset</button>
+            <button id="undoButton" class="menu-btn">Edit: Undo</button>
+            <button id="redoButton" class="menu-btn">Edit: Redo</button>
+            <button id="downloadButton" class="menu-btn">File: Download</button>
+        </div>
 
-        <div id="resolutionButtons" style="position: fixed; bottom: 30px; left: 30px; z-index:5;">
-            <div style="display:flex; gap:5px;">
-                <div style="display:flex; flex-direction: column; gap:5px;">
-                    <button id="vStretch2" style="width: 65px; height: 65px; font-size: 24px;">▲</button>
-                    <button id="vStretch1" style="width: 65px; height: 65px; font-size: 24px;">△</button>
+<!-- main content area -->
+        <div class="main-content">
+<!-- left sidebar controls -->
+            <div class="sidebar">
+<!-- light and exposure panel -->
+                <div class="panel">
+                    <div class="panel-header">Light & Exposure</div>
+                    <div class="panel-content">
+                        <div class="slider-item">
+                            <label>Exposure: <span id="exposureValue">0</span></label>
+                            <input type="range" id="exposureSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Contrast: <span id="contrastValue">0</span></label>
+                            <input type="range" id="contrastSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Highlights: <span id="highlightsValue">0</span></label>
+                            <input type="range" id="highlightsSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Shadows: <span id="shadowsValue">0</span></label>
+                            <input type="range" id="shadowsSlider" min="-100" max="100" value="0">
+                        </div>
+                    </div>
                 </div>
-                <button id="bwFilter" style="width: 135px; height: 135px; font-size: 18px; font-weight: bold;"></button>
+
+<!-- color adjustments panel -->
+                <div class="panel">
+                    <div class="panel-header">Color Adjustments</div>
+                    <div class="panel-content">
+                        <div class="slider-item">
+                            <label>Saturation: <span id="saturationValue">0</span></label>
+                            <input type="range" id="saturationSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Vibrance: <span id="vibranceValue">0</span></label>
+                            <input type="range" id="vibranceSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Temperature: <span id="temperatureValue">0</span></label>
+                            <input type="range" id="temperatureSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Tint: <span id="tintValue">0</span></label>
+                            <input type="range" id="tintSlider" min="-100" max="100" value="0">
+                        </div>
+                    </div>
+                </div>
+
+<!-- color channels panel -->
+                <div class="panel">
+                    <div class="panel-header">Color Channels (RGB)</div>
+                    <div class="panel-content color-grid">
+                        <div class="slider-item color-red">
+                            <label>Red: <span id="redValue">0</span></label>
+                            <input type="range" id="redSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item color-green">
+                            <label>Green: <span id="greenValue">0</span></label>
+                            <input type="range" id="greenSlider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-item color-blue">
+                            <label>Blue: <span id="blueValue">0</span></label>
+                            <input type="range" id="blueSlider" min="-100" max="100" value="0">
+                        </div>
+                    </div>
+                </div>
+
+<!-- effects panel -->
+                <div class="panel">
+                    <div class="panel-header">Effects</div>
+                    <div class="panel-content">
+                        <div class="slider-item">
+                            <label>Sharpen: <span id="sharpenValue">0</span></label>
+                            <input type="range" id="sharpenSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Blur: <span id="blurValue">0</span></label>
+                            <input type="range" id="blurSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Vignette: <span id="vignetteValue">0</span></label>
+                            <input type="range" id="vignetteSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Grain: <span id="grainValue">0</span></label>
+                            <input type="range" id="grainSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Pixelate: <span id="pixelateValue">0</span></label>
+                            <input type="range" id="pixelateSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Chromatic: <span id="chromaticValue">0</span></label>
+                            <input type="range" id="chromaticSlider" min="0" max="100" value="0">
+                        </div>
+                    </div>
+                </div>
+
+<!-- creative effects panel -->
+                <div class="panel">
+                    <div class="panel-header">Creative Effects</div>
+                    <div class="panel-content">
+                        <div class="slider-item">
+                            <label>Glow: <span id="glowValue">0</span></label>
+                            <input type="range" id="glowSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Posterize: <span id="posterizeValue">0</span></label>
+                            <input type="range" id="posterizeSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-item">
+                            <label>Duotone: <span id="duotoneValue">0</span></label>
+                            <input type="range" id="duotoneSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="effect-buttons">
+                            <button id="invertBtn" class="effect-btn">Invert</button>
+                            <button id="bwFilter" class="effect-btn">B&W</button>
+                            <button id="sepiaBtn" class="effect-btn">Sepia</button>
+                            <button id="thresholdBtn" class="effect-btn">Threshold</button>
+                        </div>
+                    </div>
+                </div>
+
+<!-- transform tools panel -->
+                <div class="panel">
+                    <div class="panel-header">Transform</div>
+                    <div class="panel-content tools-grid">
+                        <div class="tool-group">
+                            <span class="tool-label">Rotation:</span>
+                            <div class="tool-buttons">
+                                <button id="rotateLeft" title="Rotate Left 90°">↺</button>
+                                <button id="rotateRight" title="Rotate Right 90°">↻</button>
+                            </div>
+                        </div>
+                        <div class="tool-group">
+                            <span class="tool-label">Flip:</span>
+                            <div class="tool-buttons">
+                                <button id="flipH">Horizontal</button>
+                                <button id="flipV">Vertical</button>
+                            </div>
+                        </div>
+                        <div class="tool-group">
+                            <span class="tool-label">Aspect Ratio:</span>
+                            <div class="tool-buttons">
+                                <button id="aspect11" title="1:1 Square">1:1</button>
+                                <button id="aspect43" title="4:3">4:3</button>
+                                <button id="aspect169" title="16:9 Widescreen">16:9</button>
+                                <button id="aspectFree" title="Free">Free</button>
+                            </div>
+                        </div>
+                        <div class="tool-group">
+                            <span class="tool-label">Scale:</span>
+                            <div class="slider-item">
+                                <input type="range" id="scaleSlider" min="50" max="150" value="100">
+                                <span id="scaleValue">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+<!-- export options panel -->
+                <div class="panel">
+                    <div class="panel-header">Export Options</div>
+                    <div class="panel-content">
+                        <div class="tool-group">
+                            <span class="tool-label">Format:</span>
+                            <div class="tool-buttons">
+                                <button id="formatPng" class="format-btn active">PNG</button>
+                                <button id="formatJpg" class="format-btn">JPG</button>
+                                <button id="formatWebp" class="format-btn">WebP</button>
+                            </div>
+                        </div>
+                        <div class="tool-group">
+                            <span class="tool-label">Quality:</span>
+                            <div class="slider-item">
+                                <input type="range" id="qualitySlider" min="10" max="100" value="90">
+                                <span id="qualityValue">90%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div style="display: flex; gap: 5px; margin-top: 5px;">
-                <button id="center" style="width: 65px; height: 65px; font-size: 24px;">-</button>
-                <button id="hStretch1" style="width: 65px; height: 65px; font-size: 24px;">▷</button>
-                <button id="hStretch2" style="width: 65px; height: 65px; font-size: 24px;">►</button>
-            </div>
-        </div>
-        <div id="colorSliders" class="slider-container">
-            <div class="slider-item" id="redSliderBox">
-                <label for="redSlider">R: <span id="redValue">10</span></label>
-                <input type="range" id="redSlider" min="0" max="20" value="10" step="1">
-            </div>
-            <div class="slider-item" id="greenSliderBox">
-                <label for="greenSlider">G: <span id="greenValue">10</span></label>
-                <input type="range" id="greenSlider" min="0" max="20" value="10" step="1">
-            </div>
-            <div class="slider-item" id="blueSliderBox">
-                <label for="blueSlider">B: <span id="blueValue">10</span></label>
-                <input type="range" id="blueSlider" min="0" max="20" value="10" step="1">
-            </div>
-        </div>
-        <div id="colorSliders2" class="slider-container">
-            <div class="slider-item" id="yellowSliderBox">
-                <label for="yellowSlider">Y: <span id="yellowValue">10</span></label>
-                <input type="range" id="yellowSlider" min="0" max="20" value="10" step="1">
-            </div>
-            <div class="slider-item" id="purpleSliderBox">
-                <label for="purpleSlider">P: <span id="purpleValue">10</span></label>
-                <input type="range" id="purpleSlider" min="0" max="20" value="10" step="1">
-            </div>
-            <div class="slider-item" id="pinkSliderBox">
-                <label for="pinkSlider">Pi: <span id="pinkValue">10</span></label>
-                <input type="range" id="pinkSlider" min="0" max="20" value="10" step="1">
+
+<!-- canvas area -->
+            <div class="canvas-area" id="canvasContainer">
             </div>
         </div>
 
-        <div id="flipButtons" style="position: fixed; bottom: 30px; left: 260px; z-index: 5;">
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <button id="flipH" style="width: 90px; height: 65px; font-size: 14px; font-weight: bold;">FLIP H</button>
-                <button id="flipV" style="width: 90px; height: 65px; font-size: 14px; font-weight: bold;">FLIP V</button>
-            </div>
+<!-- status bar -->
+        <div class="status-bar">
+            <span id="statusText">Ready - Upload an image to begin</span>
+            <span id="historyStatus">History: 0/0</span>
+            <span id="zoomStatus">Zoom: 100%</span>
         </div>
     </div>
 </body>

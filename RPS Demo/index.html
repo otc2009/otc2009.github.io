@@ -12,24 +12,86 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f0f0f0;
+            position: relative;
+            overflow: hidden;
         }
+
+        .background-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0;
+            transition: opacity 2.5s ease-in-out;
+            z-index: -1;
+        }
+
+        .background-layer.active {
+            opacity: 1;
+        }
+
+        #bg1 {
+            background-image: url('rock.jpg');
+        }
+
+        #bg2 {
+            background-image: url('paper.jpeg');
+        }
+
+        #bg3 {
+            background-image: url('scissors.webp');
+        }
+
         #canvas {
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <button id="resetButton" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 16px; font-weight: bold; background-color: #333; color: white; border: 2px solid black; border-radius: 8px; cursor: pointer; z-index: 1000; box-shadow: 3px 3px 10px rgba(0,0,0,0.5);">RESET DEMO</button>
+    <div id="bg1" class="background-layer active"></div>
+    <div id="bg2" class="background-layer"></div>
+    <div id="bg3" class="background-layer"></div>
 
+    <canvas id="canvas"></canvas>
+    <button id="resetButton" style="position: fixed; top: 50%; left: calc(50% + 250px); transform: translateY(-50%); padding: 8px 16px; font-size: 12px; font-weight: bold; background-color: #333; color: white; border: 2px solid black; border-radius: 8px; cursor: pointer; z-index: 1000; box-shadow: 3px 3px 10px rgba(0,0,0,0.5);">RESET DEMO</button>
+
+    <script>
+        // Background fade animation
+        const backgrounds = [
+            document.getElementById('bg1'),
+            document.getElementById('bg2'),
+            document.getElementById('bg3')
+        ];
+        let currentBgIndex = 0;
+
+        function fadeBackgrounds() {
+            // Remove active class from current background
+            backgrounds[currentBgIndex].classList.remove('active');
+
+            // Move to next background
+            currentBgIndex = (currentBgIndex + 1) % backgrounds.length;
+
+            // Add active class to new background
+            backgrounds[currentBgIndex].classList.add('active');
+        }
+
+        // Start the background fade cycle (every 5 seconds)
+        setInterval(fadeBackgrounds, 5000);
+    </script>
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
         let currentImage = 'title.png';
-        let selectedChoice = null; // Track which button user clicked (rock, paper, scissors)
+        let endScreenIndex = 0; // Track which end screen to show next
+        const endScreens = ['errorfr.png', 'rock_wins.png', 'rocks_tie.png', 'paper_winsfr.png', 'papers_tie.png', 'scissors_win.png', 'scissors_tie.png'];
         let titleImg = new Image();
         let titlePressedImg = new Image();
         let pairingImg = new Image();
@@ -39,25 +101,36 @@
         let selectionYellowImg = new Image();
         let selectionGreenImg = new Image();
         let rockWinsImg = new Image();
+        let rocksTieImg = new Image();
         let paperWinsImg = new Image();
         let papersTieImg = new Image();
+        let scissorsWinImg = new Image();
+        let scissorsTieImg = new Image();
         let errorImg = new Image();
 
         let cropData = {};
+        let unifiedCrop = null; // Unified crop for countdown and result screens
+        let imagesLoaded = 0;
+        const totalImages = 15;
+        let fadeAlpha = 1; // For fade transitions
+        let isTransitioning = false;
 
         // Load images
         titleImg.src = 'title.png';
         titlePressedImg.src = 'title_pressed.png';
         pairingImg.src = 'pairing.png';
-        pairedImg.src = 'paired.png';
+        pairedImg.src = 'pairedfr.png';
         selectionNoneImg.src = 'realselection_none.png';
         selectionRedImg.src = 'realselection_3.png';
         selectionYellowImg.src = 'realselection_2.png';
         selectionGreenImg.src = 'realselection_1.png';
         rockWinsImg.src = 'rock_wins.png';
-        paperWinsImg.src = 'paper_wins.png';
+        rocksTieImg.src = 'rocks_tie.png';
+        paperWinsImg.src = 'paper_winsfr.png';
         papersTieImg.src = 'papers_tie.png';
-        errorImg.src = 'realerror.png';
+        scissorsWinImg.src = 'scissors_win.png';
+        scissorsTieImg.src = 'scissors_tie.png';
+        errorImg.src = 'errorfr.png';
 
         // Function to detect black borders and calculate crop area
         function detectBlackBorders(img) {
@@ -151,9 +224,9 @@
         // Wait for title image to load to set canvas size
         titleImg.onload = function() {
             cropData['title.png'] = detectBlackBorders(titleImg);
-            // Make canvas smaller (70% of original size)
-            canvas.width = cropData['title.png'].width * 0.7;
-            canvas.height = cropData['title.png'].height * 0.7;
+            // Make canvas thinner (60% width, 72% height)
+            canvas.width = cropData['title.png'].width * 0.6;
+            canvas.height = cropData['title.png'].height * 0.72;
             drawCurrentImage();
         };
 
@@ -166,39 +239,108 @@
         };
 
         pairedImg.onload = function() {
-            cropData['paired.png'] = detectBlackBorders(pairedImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
+        // Calculate unified crop area for all selection/result screens
+        function calculateUnifiedCrop() {
+            const crops = [
+                detectBlackBorders(selectionNoneImg),
+                detectBlackBorders(selectionRedImg),
+                detectBlackBorders(selectionYellowImg),
+                detectBlackBorders(selectionGreenImg),
+                detectBlackBorders(rockWinsImg),
+                detectBlackBorders(rocksTieImg),
+                detectBlackBorders(paperWinsImg),
+                detectBlackBorders(papersTieImg),
+                detectBlackBorders(scissorsWinImg),
+                detectBlackBorders(scissorsTieImg),
+                detectBlackBorders(errorImg),
+                detectBlackBorders(pairedImg)
+            ];
+
+            // Find the maximum bounds that fit all images
+            let minX = Math.min(...crops.map(c => c.x));
+            let minY = Math.min(...crops.map(c => c.y));
+            let maxRight = Math.max(...crops.map(c => c.x + c.width));
+            let maxBottom = Math.max(...crops.map(c => c.y + c.height));
+
+            unifiedCrop = {
+                x: minX,
+                y: minY,
+                width: maxRight - minX,
+                height: maxBottom - minY
+            };
+
+            // Use unified crop for all these screens
+            cropData['realselection_none.png'] = unifiedCrop;
+            cropData['realselection_3.png'] = unifiedCrop;
+            cropData['realselection_2.png'] = unifiedCrop;
+            cropData['realselection_1.png'] = unifiedCrop;
+            cropData['rock_wins.png'] = unifiedCrop;
+            cropData['rocks_tie.png'] = unifiedCrop;
+            cropData['paper_winsfr.png'] = unifiedCrop;
+            cropData['papers_tie.png'] = unifiedCrop;
+            cropData['scissors_win.png'] = unifiedCrop;
+            cropData['scissors_tie.png'] = unifiedCrop;
+            cropData['errorfr.png'] = unifiedCrop;
+            cropData['pairedfr.png'] = unifiedCrop;
+        }
+
         selectionNoneImg.onload = function() {
-            cropData['realselection_none.png'] = detectBlackBorders(selectionNoneImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         selectionRedImg.onload = function() {
-            cropData['realselection_3.png'] = detectBlackBorders(selectionRedImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         selectionYellowImg.onload = function() {
-            cropData['realselection_2.png'] = detectBlackBorders(selectionYellowImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         selectionGreenImg.onload = function() {
-            cropData['realselection_1.png'] = detectBlackBorders(selectionGreenImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         rockWinsImg.onload = function() {
-            cropData['rock_wins.png'] = detectBlackBorders(rockWinsImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
+        };
+
+        rocksTieImg.onload = function() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         paperWinsImg.onload = function() {
-            cropData['paper_wins.png'] = detectBlackBorders(paperWinsImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         papersTieImg.onload = function() {
-            cropData['papers_tie.png'] = detectBlackBorders(papersTieImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
+        };
+
+        scissorsWinImg.onload = function() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
+        };
+
+        scissorsTieImg.onload = function() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         errorImg.onload = function() {
-            cropData['realerror.png'] = detectBlackBorders(errorImg);
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) calculateUnifiedCrop();
         };
 
         function drawCurrentImage() {
@@ -214,9 +356,9 @@
             } else if (currentImage === 'pairing.png') {
                 img = pairingImg;
                 crop = cropData['pairing.png'];
-            } else if (currentImage === 'paired.png') {
+            } else if (currentImage === 'pairedfr.png') {
                 img = pairedImg;
-                crop = cropData['paired.png'];
+                crop = cropData['pairedfr.png'];
             } else if (currentImage === 'realselection_none.png') {
                 img = selectionNoneImg;
                 crop = cropData['realselection_none.png'];
@@ -232,21 +374,36 @@
             } else if (currentImage === 'rock_wins.png') {
                 img = rockWinsImg;
                 crop = cropData['rock_wins.png'];
-            } else if (currentImage === 'paper_wins.png') {
+            } else if (currentImage === 'rocks_tie.png') {
+                img = rocksTieImg;
+                crop = cropData['rocks_tie.png'];
+            } else if (currentImage === 'paper_winsfr.png') {
                 img = paperWinsImg;
-                crop = cropData['paper_wins.png'];
+                crop = cropData['paper_winsfr.png'];
             } else if (currentImage === 'papers_tie.png') {
                 img = papersTieImg;
                 crop = cropData['papers_tie.png'];
-            } else if (currentImage === 'realerror.png') {
+            } else if (currentImage === 'scissors_win.png') {
+                img = scissorsWinImg;
+                crop = cropData['scissors_win.png'];
+            } else if (currentImage === 'scissors_tie.png') {
+                img = scissorsTieImg;
+                crop = cropData['scissors_tie.png'];
+            } else if (currentImage === 'errorfr.png') {
                 img = errorImg;
-                crop = cropData['realerror.png'];
+                crop = cropData['errorfr.png'];
             }
 
             if (img && crop) {
+                // Apply fade alpha
+                ctx.globalAlpha = fadeAlpha;
+
                 // Draw the cropped image
                 ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height,
                              0, 0, canvas.width, canvas.height);
+
+                // Reset alpha for border
+                ctx.globalAlpha = 1;
 
                 // Add thicker black border that bleeds into the photo
                 ctx.strokeStyle = 'black';
@@ -256,15 +413,64 @@
                 // If crop data isn't ready yet, calculate it now
                 crop = detectBlackBorders(img);
                 cropData[currentImage] = crop;
+
+                // Apply fade alpha
+                ctx.globalAlpha = fadeAlpha;
+
                 // Draw the cropped image
                 ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height,
                              0, 0, canvas.width, canvas.height);
+
+                // Reset alpha for border
+                ctx.globalAlpha = 1;
 
                 // Add thicker black border that bleeds into the photo
                 ctx.strokeStyle = 'black';
                 ctx.lineWidth = 8;
                 ctx.strokeRect(0, 0, canvas.width, canvas.height);
             }
+        }
+
+        // Function to transition to a new image with fade effect
+        function transitionToImage(newImage, duration = 300) {
+            if (isTransitioning) return;
+            isTransitioning = true;
+
+            const fadeOutDuration = duration / 2;
+            const fadeInDuration = duration / 2;
+            const fadeOutSteps = 20;
+            const fadeInSteps = 20;
+            const fadeOutInterval = fadeOutDuration / fadeOutSteps;
+            const fadeInInterval = fadeInDuration / fadeInSteps;
+
+            let step = 0;
+
+            // Fade out
+            const fadeOut = setInterval(() => {
+                step++;
+                fadeAlpha = 1 - (step / fadeOutSteps);
+                drawCurrentImage();
+
+                if (step >= fadeOutSteps) {
+                    clearInterval(fadeOut);
+                    // Change image at the midpoint
+                    currentImage = newImage;
+                    step = 0;
+
+                    // Fade in
+                    const fadeIn = setInterval(() => {
+                        step++;
+                        fadeAlpha = step / fadeInSteps;
+                        drawCurrentImage();
+
+                        if (step >= fadeInSteps) {
+                            clearInterval(fadeIn);
+                            fadeAlpha = 1;
+                            isTransitioning = false;
+                        }
+                    }, fadeInInterval);
+                }
+            }, fadeOutInterval);
         }
 
         function resetDemo() {
@@ -275,53 +481,55 @@
         // Reset button event listener
         document.getElementById('resetButton').addEventListener('click', resetDemo);
 
-        // Handle click events
+        // Function to start countdown and show end screen
+        function startCountdown() {
+            currentImage = 'realselection_none.png';
+            drawCurrentImage();
+
+            // Automatic transitions through selection screens
+            setTimeout(() => {
+                currentImage = 'realselection_3.png';
+                drawCurrentImage();
+
+                setTimeout(() => {
+                    currentImage = 'realselection_2.png';
+                    drawCurrentImage();
+
+                    setTimeout(() => {
+                        currentImage = 'realselection_1.png';
+                        drawCurrentImage();
+
+                        // After countdown, show the current end screen
+                        setTimeout(() => {
+                            transitionToImage(endScreens[endScreenIndex]);
+                        }, 1000);
+                    }, 1000);
+                }, 1000);
+            }, 1000);
+        }
+
+        // Handle click events - simple presentation mode
         canvas.addEventListener('click', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            if (isTransitioning) return; // Prevent clicks during transitions
 
             if (currentImage === 'title.png') {
-                // Check if click is on the play button area
-                const buttonY = canvas.height * 0.6; // Button starts at 60% down
-                const buttonHeight = canvas.height * 0.3; // Button is 30% of height
-                const buttonX = canvas.width * 0.2; // Button starts at 20% from left
-                const buttonWidth = canvas.width * 0.6; // Button is 60% of width
+                // Flash the pressed state
+                currentImage = 'title_pressed.png';
+                drawCurrentImage();
 
-                if (x >= buttonX && x <= buttonX + buttonWidth &&
-                    y >= buttonY && y <= buttonY + buttonHeight) {
-                    // Flash the pressed state
-                    currentImage = 'title_pressed.png';
-                    drawCurrentImage();
-
-                    // Show title_pressed for 2 seconds, then transition to pairing
-                    setTimeout(() => {
-                        currentImage = 'pairing.png';
-                        drawCurrentImage();
-                    }, 2000);
-                }
+                // Show title_pressed for 1 second, then transition to pairing
+                setTimeout(() => {
+                    transitionToImage('pairing.png');
+                }, 1000);
             } else if (currentImage === 'pairing.png') {
                 // Any click on pairing screen goes to paired
-                currentImage = 'paired.png';
-                drawCurrentImage();
-            } else if (currentImage === 'paired.png') {
-                // Check if click is on the "Ready" button
-                // Ready button is typically in the bottom center area
-                const buttonY = canvas.height * 0.75; // Button starts at 75% down
-                const buttonHeight = canvas.height * 0.15; // Button is 15% of height
-                const buttonX = canvas.width * 0.3; // Button starts at 30% from left
-                const buttonWidth = canvas.width * 0.4; // Button is 40% of width
+                transitionToImage('pairedfr.png');
+            } else if (currentImage === 'pairedfr.png') {
+                // Start the countdown with fade transition
+                transitionToImage('realselection_none.png');
 
-                if (x >= buttonX && x <= buttonX + buttonWidth &&
-                    y >= buttonY && y <= buttonY + buttonHeight) {
-                    // Reset selectedChoice when starting countdown
-                    selectedChoice = null;
-
-                    // Go to realselection_none
-                    currentImage = 'realselection_none.png';
-                    drawCurrentImage();
-
-                    // Automatic transitions through selection screens
+                // Continue countdown after transition
+                setTimeout(() => {
                     setTimeout(() => {
                         currentImage = 'realselection_3.png';
                         drawCurrentImage();
@@ -334,88 +542,28 @@
                                 currentImage = 'realselection_1.png';
                                 drawCurrentImage();
 
-                                // After 1 second on realselection_1, show result based on selectedChoice
+                                // After countdown, show the current end screen
                                 setTimeout(() => {
-                                    if (selectedChoice === 'rock') {
-                                        // Randomly choose between rock_wins.png and papers_tie.png
-                                        currentImage = Math.random() < 0.5 ? 'rock_wins.png' : 'papers_tie.png';
-                                        drawCurrentImage();
-                                    } else if (selectedChoice === null) {
-                                        // No choice was made, show error screen
-                                        currentImage = 'realerror.png';
-                                        drawCurrentImage();
-                                    }
+                                    transitionToImage(endScreens[endScreenIndex]);
                                 }, 1000);
                             }, 1000);
                         }, 1000);
                     }, 1000);
-                }
-            } else if (currentImage === 'realselection_none.png' || currentImage === 'realselection_3.png' ||
-                       currentImage === 'realselection_2.png' || currentImage === 'realselection_1.png') {
-                // Detect which button was clicked (rock, paper, or scissors)
-                // Assuming three buttons arranged horizontally
-                const buttonY = canvas.height * 0.5; // Buttons around middle
-                const buttonHeight = canvas.height * 0.3;
+                }, 300); // Wait for initial transition to complete
+            } else if (currentImage === 'errorfr.png') {
+                // Timeout screen goes straight back to countdown and moves to next end screen
+                endScreenIndex = (endScreenIndex + 1) % endScreens.length;
+                startCountdown();
+            } else if (endScreens.includes(currentImage)) {
+                // Move to next end screen
+                endScreenIndex = (endScreenIndex + 1) % endScreens.length;
 
-                // Rock button (left third)
-                if (x >= 0 && x <= canvas.width * 0.33 &&
-                    y >= buttonY && y <= buttonY + buttonHeight) {
-                    selectedChoice = 'rock';
-                }
-                // Paper button (middle third)
-                else if (x >= canvas.width * 0.33 && x <= canvas.width * 0.66 &&
-                         y >= buttonY && y <= buttonY + buttonHeight) {
-                    selectedChoice = 'paper';
-                }
-                // Scissors button (right third)
-                else if (x >= canvas.width * 0.66 && x <= canvas.width &&
-                         y >= buttonY && y <= buttonY + buttonHeight) {
-                    selectedChoice = 'scissors';
-                }
-            } else if (currentImage === 'realerror.png') {
-                // Check if click is on the "Ready" button (same as paired screen)
-                const buttonY = canvas.height * 0.75; // Button starts at 75% down
-                const buttonHeight = canvas.height * 0.15; // Button is 15% of height
-                const buttonX = canvas.width * 0.3; // Button starts at 30% from left
-                const buttonWidth = canvas.width * 0.4; // Button is 40% of width
-
-                if (x >= buttonX && x <= buttonX + buttonWidth &&
-                    y >= buttonY && y <= buttonY + buttonHeight) {
-                    // Reset selectedChoice when starting countdown
-                    selectedChoice = null;
-
-                    // Go to realselection_none
-                    currentImage = 'realselection_none.png';
-                    drawCurrentImage();
-
-                    // Automatic transitions through selection screens
-                    setTimeout(() => {
-                        currentImage = 'realselection_3.png';
-                        drawCurrentImage();
-
-                        setTimeout(() => {
-                            currentImage = 'realselection_2.png';
-                            drawCurrentImage();
-
-                            setTimeout(() => {
-                                currentImage = 'realselection_1.png';
-                                drawCurrentImage();
-
-                                // After 1 second on realselection_1, show result based on selectedChoice
-                                setTimeout(() => {
-                                    if (selectedChoice === 'rock') {
-                                        // Randomly choose between rock_wins.png and papers_tie.png
-                                        currentImage = Math.random() < 0.5 ? 'rock_wins.png' : 'papers_tie.png';
-                                        drawCurrentImage();
-                                    } else if (selectedChoice === null) {
-                                        // No choice was made, show error screen
-                                        currentImage = 'realerror.png';
-                                        drawCurrentImage();
-                                    }
-                                }, 1000);
-                            }, 1000);
-                        }, 1000);
-                    }, 1000);
+                // If we just finished the last end screen (scissors_tie), go back to title
+                // Otherwise, go back to paired screen to play again
+                if (currentImage === 'scissors_tie.png') {
+                    transitionToImage('title.png');
+                } else {
+                    transitionToImage('pairedfr.png');
                 }
             }
         });
