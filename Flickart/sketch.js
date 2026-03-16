@@ -1,58 +1,58 @@
-let img = null;
-let originalImg = null;
-let processedImg = null;
-let originalWidth = 0;
-let originalHeight = 0;
-let displayW, displayH;
-let centerX, centerY;
-let canvasContainer;
+let photoImage = null;
+let baseImage = null;
+let finalImage = null;
+let baseWidth = 0;
+let baseHeight = 0;
+let viewWidth, viewHeight;
+let viewCenterX, viewCenterY;
+let canvasShell;
 
-let history = [];
-let historyIndex = -1;
-const MAX_HISTORY = 20;
+let editHistory = [];
+let editIndex = -1;
+const MAX_EDIT_STEPS = 20;
 
-let exposure = 0;
-let contrast = 0;
-let highlights = 0;
-let shadows = 0;
+let lightExposure = 0;
+let toneContrast = 0;
+let brightHighlights = 0;
+let deepShadows = 0;
 
-let saturation = 0;
-let vibrance = 0;
-let temperature = 0;
-let tint = 0;
+let colorSaturation = 0;
+let colorVibrance = 0;
+let colorWarmth = 0;
+let colorTint = 0;
 
-let redChannel = 0;
-let greenChannel = 0;
-let blueChannel = 0;
+let redBoost = 0;
+let greenBoost = 0;
+let blueBoost = 0;
 
-let sharpen = 0;
-let blurAmount = 0;
-let vignette = 0;
-let grain = 0;
-let pixelate = 0;
-let chromatic = 0;
+let edgeSharpen = 0;
+let blurStrength = 0;
+let edgeVignette = 0;
+let filmGrain = 0;
+let pixelBlocks = 0;
+let colorFringe = 0;
 
-let glowAmount = 0;
-let posterize = 0;
-let duotone = 0;
+let glowHalo = 0;
+let colorSteps = 0;
+let duoMix = 0;
 
-let bwFilterActive = false;
-let invertActive = false;
-let sepiaActive = false;
-let thresholdActive = false;
+let bwOn = false;
+let invertOn = false;
+let sepiaOn = false;
+let thresholdOn = false;
 
-let rotation = 0;
-let flipHorizontal = false;
-let flipVertical = false;
-let aspectRatio = 'free';
-let scaleAmount = 100;
+let imageSpin = 0;
+let flipSideways = false;
+let flipUpside = false;
+let frameShape = 'free';
+let zoomPercent = 100;
 
-let exportFormat = 'png';
-let exportQuality = 90;
+let saveFormat = 'png';
+let saveQuality = 90;
 
-let filterTimeout = null;
-let needsProcessing = false;
-let ogDisplayW, ogDisplayH;
+let filterDelayId = null;
+let needsRefresh = false;
+let baseViewW, baseViewH;
 
 function showLoading(message) {
     message = message || 'Processing...';
@@ -88,43 +88,43 @@ function updateStatus(text) {
 
 function updateHistoryStatus() {
     const el = document.getElementById('historyStatus');
-    if (el) el.textContent = 'History: ' + (historyIndex + 1) + '/' + history.length;
+    if (el) el.textContent = 'History: ' + (editIndex + 1) + '/' + editHistory.length;
 }
 
 function updateZoomStatus() {
     const el = document.getElementById('zoomStatus');
-    if (el) el.textContent = 'Zoom: ' + scaleAmount + '%';
+    if (el) el.textContent = 'Zoom: ' + zoomPercent + '%';
 }
 
 function saveToHistory() {
-    if (historyIndex < history.length - 1) {
-        history = history.slice(0, historyIndex + 1);
+    if (editIndex < editHistory.length - 1) {
+        editHistory = editHistory.slice(0, editIndex + 1);
     }
     const state = {
-        exposure: exposure, contrast: contrast, highlights: highlights, shadows: shadows,
-        saturation: saturation, vibrance: vibrance, temperature: temperature, tint: tint,
-        redChannel: redChannel, greenChannel: greenChannel, blueChannel: blueChannel,
-        sharpen: sharpen, blurAmount: blurAmount, vignette: vignette, grain: grain,
-        pixelate: pixelate, chromatic: chromatic, glowAmount: glowAmount,
-        posterize: posterize, duotone: duotone,
-        bwFilterActive: bwFilterActive, invertActive: invertActive,
-        sepiaActive: sepiaActive, thresholdActive: thresholdActive,
-        rotation: rotation, flipHorizontal: flipHorizontal,
-        flipVertical: flipVertical, scaleAmount: scaleAmount
+        lightExposure: lightExposure, toneContrast: toneContrast, brightHighlights: brightHighlights, deepShadows: deepShadows,
+        colorSaturation: colorSaturation, colorVibrance: colorVibrance, colorWarmth: colorWarmth, colorTint: colorTint,
+        redBoost: redBoost, greenBoost: greenBoost, blueBoost: blueBoost,
+        edgeSharpen: edgeSharpen, blurStrength: blurStrength, edgeVignette: edgeVignette, filmGrain: filmGrain,
+        pixelBlocks: pixelBlocks, colorFringe: colorFringe, glowHalo: glowHalo,
+        colorSteps: colorSteps, duoMix: duoMix,
+        bwOn: bwOn, invertOn: invertOn,
+        sepiaOn: sepiaOn, thresholdOn: thresholdOn,
+        imageSpin: imageSpin, flipSideways: flipSideways,
+        flipUpside: flipUpside, zoomPercent: zoomPercent
     };
-    history.push(state);
-    if (history.length > MAX_HISTORY) {
-        history.shift();
+    editHistory.push(state);
+    if (editHistory.length > MAX_EDIT_STEPS) {
+        editHistory.shift();
     } else {
-        historyIndex++;
+        editIndex++;
     }
     updateHistoryStatus();
 }
 
 function undo() {
-    if (historyIndex > 0) {
-        historyIndex--;
-        restoreState(history[historyIndex]);
+    if (editIndex > 0) {
+        editIndex--;
+        restoreState(editHistory[editIndex]);
         showToast('Undo');
     } else {
         showToast('Nothing to undo', 'error');
@@ -132,9 +132,9 @@ function undo() {
 }
 
 function redo() {
-    if (historyIndex < history.length - 1) {
-        historyIndex++;
-        restoreState(history[historyIndex]);
+    if (editIndex < editHistory.length - 1) {
+        editIndex++;
+        restoreState(editHistory[editIndex]);
         showToast('Redo');
     } else {
         showToast('Nothing to redo', 'error');
@@ -142,34 +142,34 @@ function redo() {
 }
 
 function restoreState(state) {
-    exposure = state.exposure;
-    contrast = state.contrast;
-    highlights = state.highlights;
-    shadows = state.shadows;
-    saturation = state.saturation;
-    vibrance = state.vibrance;
-    temperature = state.temperature;
-    tint = state.tint;
-    redChannel = state.redChannel;
-    greenChannel = state.greenChannel;
-    blueChannel = state.blueChannel;
-    sharpen = state.sharpen;
-    blurAmount = state.blurAmount;
-    vignette = state.vignette;
-    grain = state.grain;
-    pixelate = state.pixelate;
-    chromatic = state.chromatic;
-    glowAmount = state.glowAmount;
-    posterize = state.posterize;
-    duotone = state.duotone;
-    bwFilterActive = state.bwFilterActive;
-    invertActive = state.invertActive;
-    sepiaActive = state.sepiaActive;
-    thresholdActive = state.thresholdActive;
-    rotation = state.rotation;
-    flipHorizontal = state.flipHorizontal;
-    flipVertical = state.flipVertical;
-    scaleAmount = state.scaleAmount;
+    lightExposure = state.lightExposure;
+    toneContrast = state.toneContrast;
+    brightHighlights = state.brightHighlights;
+    deepShadows = state.deepShadows;
+    colorSaturation = state.colorSaturation;
+    colorVibrance = state.colorVibrance;
+    colorWarmth = state.colorWarmth;
+    colorTint = state.colorTint;
+    redBoost = state.redBoost;
+    greenBoost = state.greenBoost;
+    blueBoost = state.blueBoost;
+    edgeSharpen = state.edgeSharpen;
+    blurStrength = state.blurStrength;
+    edgeVignette = state.edgeVignette;
+    filmGrain = state.filmGrain;
+    pixelBlocks = state.pixelBlocks;
+    colorFringe = state.colorFringe;
+    glowHalo = state.glowHalo;
+    colorSteps = state.colorSteps;
+    duoMix = state.duoMix;
+    bwOn = state.bwOn;
+    invertOn = state.invertOn;
+    sepiaOn = state.sepiaOn;
+    thresholdOn = state.thresholdOn;
+    imageSpin = state.imageSpin;
+    flipSideways = state.flipSideways;
+    flipUpside = state.flipUpside;
+    zoomPercent = state.zoomPercent;
     updateAllSliderUI();
     updateEffectButtons();
     applyAllFilters();
@@ -178,26 +178,26 @@ function restoreState(state) {
 
 function updateAllSliderUI() {
     var sliders = {
-        exposureSlider: exposure, contrastSlider: contrast,
-        highlightsSlider: highlights, shadowsSlider: shadows,
-        saturationSlider: saturation, vibranceSlider: vibrance,
-        temperatureSlider: temperature, tintSlider: tint,
-        redSlider: redChannel, greenSlider: greenChannel, blueSlider: blueChannel,
-        sharpenSlider: sharpen, blurSlider: blurAmount, vignetteSlider: vignette,
-        grainSlider: grain, pixelateSlider: pixelate, chromaticSlider: chromatic,
-        glowSlider: glowAmount, posterizeSlider: posterize, duotoneSlider: duotone,
-        scaleSlider: scaleAmount, qualitySlider: exportQuality
+        exposureSlider: lightExposure, contrastSlider: toneContrast,
+        highlightsSlider: brightHighlights, shadowsSlider: deepShadows,
+        saturationSlider: colorSaturation, vibranceSlider: colorVibrance,
+        temperatureSlider: colorWarmth, tintSlider: colorTint,
+        redSlider: redBoost, greenSlider: greenBoost, blueSlider: blueBoost,
+        sharpenSlider: edgeSharpen, blurSlider: blurStrength, vignetteSlider: edgeVignette,
+        grainSlider: filmGrain, pixelateSlider: pixelBlocks, chromaticSlider: colorFringe,
+        glowSlider: glowHalo, posterizeSlider: colorSteps, duotoneSlider: duoMix,
+        scaleSlider: zoomPercent, qualitySlider: saveQuality
     };
     var values = {
-        exposureValue: exposure, contrastValue: contrast,
-        highlightsValue: highlights, shadowsValue: shadows,
-        saturationValue: saturation, vibranceValue: vibrance,
-        temperatureValue: temperature, tintValue: tint,
-        redValue: redChannel, greenValue: greenChannel, blueValue: blueChannel,
-        sharpenValue: sharpen, blurValue: blurAmount, vignetteValue: vignette,
-        grainValue: grain, pixelateValue: pixelate, chromaticValue: chromatic,
-        glowValue: glowAmount, posterizeValue: posterize, duotoneValue: duotone,
-        scaleValue: scaleAmount + '%', qualityValue: exportQuality + '%'
+        exposureValue: lightExposure, contrastValue: toneContrast,
+        highlightsValue: brightHighlights, shadowsValue: deepShadows,
+        saturationValue: colorSaturation, vibranceValue: colorVibrance,
+        temperatureValue: colorWarmth, tintValue: colorTint,
+        redValue: redBoost, greenValue: greenBoost, blueValue: blueBoost,
+        sharpenValue: edgeSharpen, blurValue: blurStrength, vignetteValue: edgeVignette,
+        grainValue: filmGrain, pixelateValue: pixelBlocks, chromaticValue: colorFringe,
+        glowValue: glowHalo, posterizeValue: colorSteps, duotoneValue: duoMix,
+        scaleValue: zoomPercent + '%', qualityValue: saveQuality + '%'
     };
     for (var id in sliders) {
         var el = document.getElementById(id);
@@ -214,151 +214,151 @@ function updateEffectButtons() {
     var invertBtn = document.getElementById('invertBtn');
     var sepiaBtn = document.getElementById('sepiaBtn');
     var thresholdBtn = document.getElementById('thresholdBtn');
-    if (bwBtn) bwBtn.classList.toggle('active', bwFilterActive);
-    if (invertBtn) invertBtn.classList.toggle('active', invertActive);
-    if (sepiaBtn) sepiaBtn.classList.toggle('active', sepiaActive);
-    if (thresholdBtn) thresholdBtn.classList.toggle('active', thresholdActive);
+    if (bwBtn) bwBtn.classList.toggle('active', bwOn);
+    if (invertBtn) invertBtn.classList.toggle('active', invertOn);
+    if (sepiaBtn) sepiaBtn.classList.toggle('active', sepiaOn);
+    if (thresholdBtn) thresholdBtn.classList.toggle('active', thresholdOn);
 }
 
 function resetAllFilters() {
-    exposure = 0; contrast = 0; highlights = 0; shadows = 0;
-    saturation = 0; vibrance = 0; temperature = 0; tint = 0;
-    redChannel = 0; greenChannel = 0; blueChannel = 0;
-    sharpen = 0; blurAmount = 0; vignette = 0; grain = 0;
-    pixelate = 0; chromatic = 0;
-    glowAmount = 0; posterize = 0; duotone = 0;
-    bwFilterActive = false; invertActive = false;
-    sepiaActive = false; thresholdActive = false;
-    rotation = 0; flipHorizontal = false; flipVertical = false;
-    scaleAmount = 100;
+    lightExposure = 0; toneContrast = 0; brightHighlights = 0; deepShadows = 0;
+    colorSaturation = 0; colorVibrance = 0; colorWarmth = 0; colorTint = 0;
+    redBoost = 0; greenBoost = 0; blueBoost = 0;
+    edgeSharpen = 0; blurStrength = 0; edgeVignette = 0; filmGrain = 0;
+    pixelBlocks = 0; colorFringe = 0;
+    glowHalo = 0; colorSteps = 0; duoMix = 0;
+    bwOn = false; invertOn = false;
+    sepiaOn = false; thresholdOn = false;
+    imageSpin = 0; flipSideways = false; flipUpside = false;
+    zoomPercent = 100;
     updateEffectButtons();
 }
 
 function applyAllFilters() {
-    if (!originalImg) return;
-    processedImg = originalImg.get();
-    var workW = originalWidth;
-    var workH = originalHeight;
+    if (!baseImage) return;
+    finalImage = baseImage.get();
+    var workW = baseWidth;
+    var workH = baseHeight;
 
-    if (pixelate > 0) {
-        var scaleFactor = map(pixelate, 0, 100, 1, 0.05);
-        var smallW = Math.max(1, originalWidth * scaleFactor);
-        var smallH = Math.max(1, originalHeight * scaleFactor);
-        processedImg.resize(smallW, smallH);
-        processedImg.resize(originalWidth, originalHeight);
+    if (pixelBlocks > 0) {
+        var scaleFactor = map(pixelBlocks, 0, 100, 1, 0.05);
+        var smallW = Math.max(1, baseWidth * scaleFactor);
+        var smallH = Math.max(1, baseHeight * scaleFactor);
+        finalImage.resize(smallW, smallH);
+        finalImage.resize(baseWidth, baseHeight);
     }
 
-    if (blurAmount > 0) {
-        var blurVal = map(blurAmount, 0, 100, 0, 6);
-        processedImg.filter(BLUR, blurVal);
+    if (blurStrength > 0) {
+        var blurVal = map(blurStrength, 0, 100, 0, 6);
+        finalImage.filter(BLUR, blurVal);
     }
 
-    processedImg.resize(800, 0);
-    workW = processedImg.width;
-    workH = processedImg.height;
+    finalImage.resize(800, 0);
+    workW = finalImage.width;
+    workH = finalImage.height;
 
-    processedImg.loadPixels();
+    finalImage.loadPixels();
 
-    for (var i = 0; i < processedImg.pixels.length; i += 4) {
-        var r = processedImg.pixels[i];
-        var g = processedImg.pixels[i + 1];
-        var b = processedImg.pixels[i + 2];
+    for (var i = 0; i < finalImage.pixels.length; i += 4) {
+        var r = finalImage.pixels[i];
+        var g = finalImage.pixels[i + 1];
+        var b = finalImage.pixels[i + 2];
 
-        if (exposure !== 0) {
-            var exp = exposure * 2.55;
+        if (lightExposure !== 0) {
+            var exp = lightExposure * 2.55;
             r += exp; g += exp; b += exp;
         }
 
-        if (contrast !== 0) {
-            var factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        if (toneContrast !== 0) {
+            var factor = (259 * (toneContrast + 255)) / (255 * (259 - toneContrast));
             r = factor * (r - 128) + 128;
             g = factor * (g - 128) + 128;
             b = factor * (b - 128) + 128;
         }
 
         var lum = (r + g + b) / 3;
-        if (highlights !== 0 && lum > 128) {
-            var highlightFactor = ((lum - 128) / 127) * (highlights / 100) * 50;
+        if (brightHighlights !== 0 && lum > 128) {
+            var highlightFactor = ((lum - 128) / 127) * (brightHighlights / 100) * 50;
             r += highlightFactor; g += highlightFactor; b += highlightFactor;
         }
-        if (shadows !== 0 && lum < 128) {
-            var shadowFactor = ((128 - lum) / 128) * (shadows / 100) * 50;
+        if (deepShadows !== 0 && lum < 128) {
+            var shadowFactor = ((128 - lum) / 128) * (deepShadows / 100) * 50;
             r += shadowFactor; g += shadowFactor; b += shadowFactor;
         }
 
-        if (temperature !== 0) {
-            r += temperature * 0.5;
-            b -= temperature * 0.5;
+        if (colorWarmth !== 0) {
+            r += colorWarmth * 0.5;
+            b -= colorWarmth * 0.5;
         }
 
-        if (tint !== 0) {
-            g += tint * 0.3;
-            r += tint * 0.15;
-            b += tint * 0.15;
+        if (colorTint !== 0) {
+            g += colorTint * 0.3;
+            r += colorTint * 0.15;
+            b += colorTint * 0.15;
         }
 
-        r += redChannel * 2.55;
-        g += greenChannel * 2.55;
-        b += blueChannel * 2.55;
+        r += redBoost * 2.55;
+        g += greenBoost * 2.55;
+        b += blueBoost * 2.55;
 
-        if (saturation !== 0) {
+        if (colorSaturation !== 0) {
             var gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
-            var satFactor = 1 + saturation / 100;
+            var satFactor = 1 + colorSaturation / 100;
             r = gray + satFactor * (r - gray);
             g = gray + satFactor * (g - gray);
             b = gray + satFactor * (b - gray);
         }
 
-        if (vibrance !== 0) {
+        if (colorVibrance !== 0) {
             var maxC = Math.max(r, g, b);
             var minC = Math.min(r, g, b);
             var sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
-            var vibFactor = (1 - sat) * (vibrance / 100);
+            var vibFactor = (1 - sat) * (colorVibrance / 100);
             var grayV = 0.2989 * r + 0.5870 * g + 0.1140 * b;
             r = r + (r - grayV) * vibFactor;
             g = g + (g - grayV) * vibFactor;
             b = b + (b - grayV) * vibFactor;
         }
 
-        if (posterize > 0) {
-            var levels = Math.max(2, Math.floor(map(posterize, 0, 100, 256, 2)));
+        if (colorSteps > 0) {
+            var levels = Math.max(2, Math.floor(map(colorSteps, 0, 100, 256, 2)));
             r = Math.floor(r / (256 / levels)) * (256 / levels);
             g = Math.floor(g / (256 / levels)) * (256 / levels);
             b = Math.floor(b / (256 / levels)) * (256 / levels);
         }
 
-        if (grain > 0) {
-            var grainIntensity = grain * 0.5;
+        if (filmGrain > 0) {
+            var grainIntensity = filmGrain * 0.5;
             var noise = random(-grainIntensity, grainIntensity);
             r += noise; g += noise; b += noise;
         }
 
-        if (bwFilterActive) {
+        if (bwOn) {
             var grayBW = 0.2989 * r + 0.5870 * g + 0.1140 * b;
             r = grayBW; g = grayBW; b = grayBW;
         }
 
-        if (sepiaActive) {
+        if (sepiaOn) {
             var tr = 0.393 * r + 0.769 * g + 0.189 * b;
             var tg = 0.349 * r + 0.686 * g + 0.168 * b;
             var tb = 0.272 * r + 0.534 * g + 0.131 * b;
             r = tr; g = tg; b = tb;
         }
 
-        if (invertActive) {
+        if (invertOn) {
             r = 255 - r; g = 255 - g; b = 255 - b;
         }
 
-        if (thresholdActive) {
+        if (thresholdOn) {
             var grayT = 0.2989 * r + 0.5870 * g + 0.1140 * b;
             r = grayT > 128 ? 255 : 0;
             g = grayT > 128 ? 255 : 0;
             b = grayT > 128 ? 255 : 0;
         }
 
-        if (duotone > 0) {
+        if (duoMix > 0) {
             var grayD = 0.2989 * r + 0.5870 * g + 0.1140 * b;
-            var duoFactor = duotone / 100;
+            var duoFactor = duoMix / 100;
             var dr, dg, db;
             if (grayD < 128) {
                 dr = map(grayD, 0, 128, 80, 255);
@@ -374,40 +374,40 @@ function applyAllFilters() {
             b = lerp(b, db, duoFactor);
         }
 
-        if (vignette > 0) {
+        if (edgeVignette > 0) {
             var pixelIndex = i / 4;
             var px = pixelIndex % workW;
             var py = (pixelIndex / workW) | 0;
             var dx = (px - workW / 2) / (workW / 2);
             var dy = (py - workH / 2) / (workH / 2);
             var dist = dx * dx + dy * dy;
-            var darken = dist * (vignette / 100);
+            var darken = dist * (edgeVignette / 100);
             r = r * (1 - darken);
             g = g * (1 - darken);
             b = b * (1 - darken);
         }
 
-        processedImg.pixels[i] = constrain(r, 0, 255);
-        processedImg.pixels[i + 1] = constrain(g, 0, 255);
-        processedImg.pixels[i + 2] = constrain(b, 0, 255);
+        finalImage.pixels[i] = constrain(r, 0, 255);
+        finalImage.pixels[i + 1] = constrain(g, 0, 255);
+        finalImage.pixels[i + 2] = constrain(b, 0, 255);
     }
-    processedImg.updatePixels();
-    processedImg.resize(originalWidth, originalHeight);
-    needsProcessing = false;
+    finalImage.updatePixels();
+    finalImage.resize(baseWidth, baseHeight);
+    needsRefresh = false;
 }
 
 function scheduleFilterUpdate() {
-    needsProcessing = true;
-    clearTimeout(filterTimeout);
-    filterTimeout = setTimeout(function() {
+    needsRefresh = true;
+    clearTimeout(filterDelayId);
+    filterDelayId = setTimeout(function() {
         applyAllFilters();
         saveToHistory();
     }, 150);
 }
 
 function setup() {
-    canvasContainer = document.getElementById('canvasContainer');
-    var containerRect = canvasContainer.getBoundingClientRect();
+    canvasShell = document.getElementById('canvasContainer');
+    var containerRect = canvasShell.getBoundingClientRect();
     var c = createCanvas(containerRect.width, containerRect.height);
     c.parent('canvasContainer');
     rectMode(CENTER);
@@ -425,20 +425,20 @@ function setup() {
         showLoading('Loading...');
         updateStatus('Loading...');
         loadImage(URL.createObjectURL(file), function(loaded) {
-            img = loaded;
-            originalImg = loaded.get();
-            originalWidth = originalImg.width;
-            originalHeight = originalImg.height;
-            processedImg = originalImg.get();
+            photoImage = loaded;
+            baseImage = loaded.get();
+            baseWidth = baseImage.width;
+            baseHeight = baseImage.height;
+            finalImage = baseImage.get();
             resetAllFilters();
             updateAllSliderUI();
             updateDisplayDimensions();
-            history = [];
-            historyIndex = -1;
+            editHistory = [];
+            editIndex = -1;
             saveToHistory();
             hideLoading();
             showToast('Image loaded!');
-            updateStatus(originalWidth + ' x ' + originalHeight);
+            updateStatus(baseWidth + ' x ' + baseHeight);
         }, function() {
             hideLoading();
             showToast('Failed to load', 'error');
@@ -446,7 +446,7 @@ function setup() {
     });
 
     document.getElementById("resetFiltersButton").addEventListener("click", function() {
-        if (!originalImg) return;
+        if (!baseImage) return;
         resetAllFilters();
         updateAllSliderUI();
         applyAllFilters();
@@ -459,45 +459,45 @@ function setup() {
     document.getElementById("redoButton").addEventListener("click", redo);
 
     document.getElementById("downloadButton").addEventListener("click", function() {
-        if (!processedImg) {
+        if (!finalImage) {
             showToast('No image', 'error');
             return;
         }
         showLoading('Exporting...');
         setTimeout(function() {
-            var downloadImg = processedImg.get();
-            if (scaleAmount !== 100) {
-                var newW = Math.round(originalWidth * scaleAmount / 100);
-                var newH = Math.round(originalHeight * scaleAmount / 100);
+            var downloadImg = finalImage.get();
+            if (zoomPercent !== 100) {
+                var newW = Math.round(baseWidth * zoomPercent / 100);
+                var newH = Math.round(baseHeight * zoomPercent / 100);
                 downloadImg.resize(newW, newH);
             }
-            if (rotation !== 0 || flipHorizontal || flipVertical) {
+            if (imageSpin !== 0 || flipSideways || flipUpside) {
                 var gfx = createGraphics(downloadImg.width, downloadImg.height);
                 gfx.push();
                 gfx.translate(gfx.width / 2, gfx.height / 2);
-                gfx.rotate(radians(rotation));
-                if (flipHorizontal) gfx.scale(-1, 1);
-                if (flipVertical) gfx.scale(1, -1);
+                gfx.rotate(radians(imageSpin));
+                if (flipSideways) gfx.scale(-1, 1);
+                if (flipUpside) gfx.scale(1, -1);
                 gfx.imageMode(CENTER);
                 gfx.image(downloadImg, 0, 0);
                 gfx.pop();
                 downloadImg = gfx;
             }
             var filename = 'flickart-' + Date.now();
-            if (exportFormat === 'jpg') {
+            if (saveFormat === 'jpg') {
                 downloadImg.canvas.toBlob(function(blob) {
                     var link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = filename + '.jpg';
                     link.click();
-                }, 'image/jpeg', exportQuality / 100);
-            } else if (exportFormat === 'webp') {
+                }, 'image/jpeg', saveQuality / 100);
+            } else if (saveFormat === 'webp') {
                 downloadImg.canvas.toBlob(function(blob) {
                     var link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = filename + '.webp';
                     link.click();
-                }, 'image/webp', exportQuality / 100);
+                }, 'image/webp', saveQuality / 100);
             } else {
                 save(downloadImg, filename + '.png');
             }
@@ -507,26 +507,26 @@ function setup() {
     });
 
     var sliderConfigs = [
-        { id: 'exposureSlider', valueId: 'exposureValue', setter: function(v) { exposure = v; } },
-        { id: 'contrastSlider', valueId: 'contrastValue', setter: function(v) { contrast = v; } },
-        { id: 'highlightsSlider', valueId: 'highlightsValue', setter: function(v) { highlights = v; } },
-        { id: 'shadowsSlider', valueId: 'shadowsValue', setter: function(v) { shadows = v; } },
-        { id: 'saturationSlider', valueId: 'saturationValue', setter: function(v) { saturation = v; } },
-        { id: 'vibranceSlider', valueId: 'vibranceValue', setter: function(v) { vibrance = v; } },
-        { id: 'temperatureSlider', valueId: 'temperatureValue', setter: function(v) { temperature = v; } },
-        { id: 'tintSlider', valueId: 'tintValue', setter: function(v) { tint = v; } },
-        { id: 'redSlider', valueId: 'redValue', setter: function(v) { redChannel = v; } },
-        { id: 'greenSlider', valueId: 'greenValue', setter: function(v) { greenChannel = v; } },
-        { id: 'blueSlider', valueId: 'blueValue', setter: function(v) { blueChannel = v; } },
-        { id: 'sharpenSlider', valueId: 'sharpenValue', setter: function(v) { sharpen = v; } },
-        { id: 'blurSlider', valueId: 'blurValue', setter: function(v) { blurAmount = v; } },
-        { id: 'vignetteSlider', valueId: 'vignetteValue', setter: function(v) { vignette = v; } },
-        { id: 'grainSlider', valueId: 'grainValue', setter: function(v) { grain = v; } },
-        { id: 'pixelateSlider', valueId: 'pixelateValue', setter: function(v) { pixelate = v; } },
-        { id: 'chromaticSlider', valueId: 'chromaticValue', setter: function(v) { chromatic = v; } },
-        { id: 'glowSlider', valueId: 'glowValue', setter: function(v) { glowAmount = v; } },
-        { id: 'posterizeSlider', valueId: 'posterizeValue', setter: function(v) { posterize = v; } },
-        { id: 'duotoneSlider', valueId: 'duotoneValue', setter: function(v) { duotone = v; } }
+        { id: 'exposureSlider', valueId: 'exposureValue', setter: function(v) { lightExposure = v; } },
+        { id: 'contrastSlider', valueId: 'contrastValue', setter: function(v) { toneContrast = v; } },
+        { id: 'highlightsSlider', valueId: 'highlightsValue', setter: function(v) { brightHighlights = v; } },
+        { id: 'shadowsSlider', valueId: 'shadowsValue', setter: function(v) { deepShadows = v; } },
+        { id: 'saturationSlider', valueId: 'saturationValue', setter: function(v) { colorSaturation = v; } },
+        { id: 'vibranceSlider', valueId: 'vibranceValue', setter: function(v) { colorVibrance = v; } },
+        { id: 'temperatureSlider', valueId: 'temperatureValue', setter: function(v) { colorWarmth = v; } },
+        { id: 'tintSlider', valueId: 'tintValue', setter: function(v) { colorTint = v; } },
+        { id: 'redSlider', valueId: 'redValue', setter: function(v) { redBoost = v; } },
+        { id: 'greenSlider', valueId: 'greenValue', setter: function(v) { greenBoost = v; } },
+        { id: 'blueSlider', valueId: 'blueValue', setter: function(v) { blueBoost = v; } },
+        { id: 'sharpenSlider', valueId: 'sharpenValue', setter: function(v) { edgeSharpen = v; } },
+        { id: 'blurSlider', valueId: 'blurValue', setter: function(v) { blurStrength = v; } },
+        { id: 'vignetteSlider', valueId: 'vignetteValue', setter: function(v) { edgeVignette = v; } },
+        { id: 'grainSlider', valueId: 'grainValue', setter: function(v) { filmGrain = v; } },
+        { id: 'pixelateSlider', valueId: 'pixelateValue', setter: function(v) { pixelBlocks = v; } },
+        { id: 'chromaticSlider', valueId: 'chromaticValue', setter: function(v) { colorFringe = v; } },
+        { id: 'glowSlider', valueId: 'glowValue', setter: function(v) { glowHalo = v; } },
+        { id: 'posterizeSlider', valueId: 'posterizeValue', setter: function(v) { colorSteps = v; } },
+        { id: 'duotoneSlider', valueId: 'duotoneValue', setter: function(v) { duoMix = v; } }
     ];
 
     for (var i = 0; i < sliderConfigs.length; i++) {
@@ -545,8 +545,8 @@ function setup() {
     var scaleSlider = document.getElementById("scaleSlider");
     if (scaleSlider) {
         scaleSlider.addEventListener("input", function(e) {
-            scaleAmount = parseInt(e.target.value);
-            document.getElementById("scaleValue").textContent = scaleAmount + '%';
+            zoomPercent = parseInt(e.target.value);
+            document.getElementById("scaleValue").textContent = zoomPercent + '%';
             updateZoomStatus();
         });
     }
@@ -554,16 +554,16 @@ function setup() {
     var qualitySlider = document.getElementById("qualitySlider");
     if (qualitySlider) {
         qualitySlider.addEventListener("input", function(e) {
-            exportQuality = parseInt(e.target.value);
-            document.getElementById("qualityValue").textContent = exportQuality + '%';
+            saveQuality = parseInt(e.target.value);
+            document.getElementById("qualityValue").textContent = saveQuality + '%';
         });
     }
 
     var bwBtn = document.getElementById("bwFilter");
     if (bwBtn) {
         bwBtn.addEventListener("click", function() {
-            bwFilterActive = !bwFilterActive;
-            bwBtn.classList.toggle('active', bwFilterActive);
+            bwOn = !bwOn;
+            bwBtn.classList.toggle('active', bwOn);
             scheduleFilterUpdate();
         });
     }
@@ -571,8 +571,8 @@ function setup() {
     var invertBtn = document.getElementById("invertBtn");
     if (invertBtn) {
         invertBtn.addEventListener("click", function() {
-            invertActive = !invertActive;
-            invertBtn.classList.toggle('active', invertActive);
+            invertOn = !invertOn;
+            invertBtn.classList.toggle('active', invertOn);
             scheduleFilterUpdate();
         });
     }
@@ -580,8 +580,8 @@ function setup() {
     var sepiaBtn = document.getElementById("sepiaBtn");
     if (sepiaBtn) {
         sepiaBtn.addEventListener("click", function() {
-            sepiaActive = !sepiaActive;
-            sepiaBtn.classList.toggle('active', sepiaActive);
+            sepiaOn = !sepiaOn;
+            sepiaBtn.classList.toggle('active', sepiaOn);
             scheduleFilterUpdate();
         });
     }
@@ -589,8 +589,8 @@ function setup() {
     var thresholdBtn = document.getElementById("thresholdBtn");
     if (thresholdBtn) {
         thresholdBtn.addEventListener("click", function() {
-            thresholdActive = !thresholdActive;
-            thresholdBtn.classList.toggle('active', thresholdActive);
+            thresholdOn = !thresholdOn;
+            thresholdBtn.classList.toggle('active', thresholdOn);
             scheduleFilterUpdate();
         });
     }
@@ -598,7 +598,7 @@ function setup() {
     var rotateLeftBtn = document.getElementById("rotateLeft");
     if (rotateLeftBtn) {
         rotateLeftBtn.addEventListener("click", function() {
-            rotation = (rotation - 90) % 360;
+            imageSpin = (imageSpin - 90) % 360;
             showToast('Rotated -90');
         });
     }
@@ -606,7 +606,7 @@ function setup() {
     var rotateRightBtn = document.getElementById("rotateRight");
     if (rotateRightBtn) {
         rotateRightBtn.addEventListener("click", function() {
-            rotation = (rotation + 90) % 360;
+            imageSpin = (imageSpin + 90) % 360;
             showToast('Rotated +90');
         });
     }
@@ -614,16 +614,16 @@ function setup() {
     var flipHBtn = document.getElementById("flipH");
     if (flipHBtn) {
         flipHBtn.addEventListener("click", function() {
-            flipHorizontal = !flipHorizontal;
-            showToast(flipHorizontal ? 'Flipped H' : 'Unflipped H');
+            flipSideways = !flipSideways;
+            showToast(flipSideways ? 'Flipped H' : 'Unflipped H');
         });
     }
 
     var flipVBtn = document.getElementById("flipV");
     if (flipVBtn) {
         flipVBtn.addEventListener("click", function() {
-            flipVertical = !flipVertical;
-            showToast(flipVertical ? 'Flipped V' : 'Unflipped V');
+            flipUpside = !flipUpside;
+            showToast(flipUpside ? 'Flipped V' : 'Unflipped V');
         });
     }
 
@@ -633,13 +633,13 @@ function setup() {
             var btn = document.getElementById(id);
             if (btn) {
                 btn.addEventListener("click", function() {
-                    aspectRatio = id.replace('aspect', '').toLowerCase();
+                    frameShape = id.replace('aspect', '').toLowerCase();
                     var allAspectBtns = document.querySelectorAll('[id^="aspect"]');
                     for (var j = 0; j < allAspectBtns.length; j++) {
                         allAspectBtns[j].classList.remove('active');
                     }
                     btn.classList.add('active');
-                    showToast('Aspect: ' + aspectRatio);
+                    showToast('Aspect: ' + frameShape);
                 });
             }
         })(aspectIds[i]);
@@ -651,13 +651,13 @@ function setup() {
             var btn = document.getElementById(id);
             if (btn) {
                 btn.addEventListener("click", function() {
-                    exportFormat = id.replace('format', '').toLowerCase();
+                    saveFormat = id.replace('format', '').toLowerCase();
                     var allFormatBtns = document.querySelectorAll('.format-btn');
                     for (var j = 0; j < allFormatBtns.length; j++) {
                         allFormatBtns[j].classList.remove('active');
                     }
                     btn.classList.add('active');
-                    showToast('Format: ' + exportFormat.toUpperCase());
+                    showToast('Format: ' + saveFormat.toUpperCase());
                 });
             }
         })(formatIds[i]);
@@ -683,45 +683,45 @@ function setup() {
 function updateDisplayDimensions() {
     var maxW = width * 0.9;
     var maxH = height * 0.9;
-    if (originalImg) {
-        var imgRatio = originalWidth / originalHeight;
+    if (baseImage) {
+        var imgRatio = baseWidth / baseHeight;
         if (maxW / maxH > imgRatio) {
-            displayH = maxH;
-            displayW = displayH * imgRatio;
+            viewHeight = maxH;
+            viewWidth = viewHeight * imgRatio;
         } else {
-            displayW = maxW;
-            displayH = displayW / imgRatio;
+            viewWidth = maxW;
+            viewHeight = viewWidth / imgRatio;
         }
     } else {
-        displayH = min(maxH, maxW / 1.5);
-        displayW = displayH * 1.5;
+        viewHeight = min(maxH, maxW / 1.5);
+        viewWidth = viewHeight * 1.5;
     }
-    ogDisplayW = displayW;
-    ogDisplayH = displayH;
-    centerX = width / 2;
-    centerY = height / 2;
+    baseViewW = viewWidth;
+    baseViewH = viewHeight;
+    viewCenterX = width / 2;
+    viewCenterY = height / 2;
 }
 
 function draw() {
     background(30);
-    if (img && processedImg) {
+    if (photoImage && finalImage) {
         push();
-        translate(centerX, centerY);
-        rotate(radians(rotation));
-        if (flipHorizontal) scale(-1, 1);
-        if (flipVertical) scale(1, -1);
-        var drawW = displayW * scaleAmount / 100;
-        var drawH = displayH * scaleAmount / 100;
-        image(processedImg, 0, 0, drawW, drawH);
+        translate(viewCenterX, viewCenterY);
+        rotate(radians(imageSpin));
+        if (flipSideways) scale(-1, 1);
+        if (flipUpside) scale(1, -1);
+        var drawW = viewWidth * zoomPercent / 100;
+        var drawH = viewHeight * zoomPercent / 100;
+        image(finalImage, 0, 0, drawW, drawH);
         pop();
         noFill();
         stroke(255);
         strokeWeight(2);
         push();
-        translate(centerX, centerY);
-        rotate(radians(rotation));
-        var bw = displayW * scaleAmount / 100 + 4;
-        var bh = displayH * scaleAmount / 100 + 4;
+        translate(viewCenterX, viewCenterY);
+        rotate(radians(imageSpin));
+        var bw = viewWidth * zoomPercent / 100 + 4;
+        var bh = viewHeight * zoomPercent / 100 + 4;
         rect(0, 0, bw, bh);
         pop();
     } else {
@@ -729,16 +729,16 @@ function draw() {
         noStroke();
         textAlign(CENTER, CENTER);
         textSize(14);
-        text('Click "File: Upload" to load an image', centerX, centerY - 10);
+        text('Click "File: Upload" to load an image', viewCenterX, viewCenterY - 10);
         textSize(11);
         fill(60);
-        text('Supports JPG, PNG, WebP, GIF', centerX, centerY + 15);
-        text('Ctrl+O to open, Ctrl+S to save, Ctrl+Z to undo', centerX, centerY + 35);
+        text('Supports JPG, PNG, WebP, GIF', viewCenterX, viewCenterY + 15);
+        text('Ctrl+O to open, Ctrl+S to save, Ctrl+Z to undo', viewCenterX, viewCenterY + 35);
     }
 }
 
 function windowResized() {
-    var containerRect = canvasContainer.getBoundingClientRect();
+    var containerRect = canvasShell.getBoundingClientRect();
     resizeCanvas(containerRect.width, containerRect.height);
     updateDisplayDimensions();
 }
